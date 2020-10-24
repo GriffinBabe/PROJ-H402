@@ -1,14 +1,15 @@
-import matplotlib.pyplot as plt
-from PIL import Image
 import numpy as np
-from keras_segmentation.models.unet import vgg_unet
+import matplotlib.pyplot as plt
 from tensorflow import keras
-from preprocessing import rescale_images, flip_images
+from keras_segmentation.models.unet import vgg_unet
+from preprocessing import rescale_images, flip_images, split_images
+from statistics import select_complex_labels
+import pickle
 
 ORIGINAL_IMAGES_DIRECTORY = './dataset/original_images/'
 LABELED_IMAGES_DIRECTORY = './dataset/label_images_semantic/'
-PROCESSED_IMAGES_DIRECTORY = './dataset/processed_images/images/'
-PROCESSED_LABELED_IMAGES_DIRECTORY = './dataset/processed_images/label/'
+PROCESSED_IMAGES_DIRECTORY = './dataset/processed_images/images_splitted/'
+PROCESSED_LABELED_IMAGES_DIRECTORY = './dataset/processed_images/label_splitted/'
 MODELS_DIRECTORY = './dataset/models/'
 OUTPUT_DIRECTORY = './dataset/out/'
 
@@ -29,22 +30,40 @@ def train_vgg_model(input_image_dir, label_image_dir, input_w, input_h, epochs, 
 
 
 def preprocess_images_and_labels():
-    rescale_images('dataset/original_images', 'dataset/processed_images', (1200, 800))
-    flip_images('dataset/processed_images', 'dataset/processed_images', image_suffix='_flipped', horizontal=True)
-    flip_images('dataset/processed_images', 'dataset/processed_images', image_suffix='_vflipped', horizontal=False)
-    rescale_images('dataset/label_images_semantic', 'dataset/processed_images/label', (1200, 800))
-    flip_images('dataset/processed_images/label', 'dataset/processed_images/label', image_suffix='_flipped', horizontal=True)
-    flip_images('dataset/processed_images/label', 'dataset/processed_images/label', image_suffix='_vflipped', horizontal=False)
+    rescale_images('dataset/original_images',
+                   'dataset/processed_images/images_rescaled',
+                   (5632, 3584))
+    flip_images('dataset/processed_images/images_splitted',
+                'dataset/processed_images/images_splitted',
+                image_suffix='_flipped', horizontal=True)
+    flip_images('dataset/processed_images',
+                'dataset/processed_images',
+                image_suffix='_vflipped', horizontal=False)
+    rescale_images('dataset/label_images_semantic',
+                   'dataset/processed_images/label_rescaled',
+                   (5632, 3584))
+    flip_images('dataset/processed_images/label_splitted',
+                'dataset/processed_images/label_splitted',
+                image_suffix='_flipped', horizontal=True)
+    flip_images('dataset/processed_images/label_splitted',
+                'dataset/processed_images/label_splitted',
+                image_suffix='_vflipped', horizontal=False)
 
 
-def load_model(path):
-    model = keras.models.load_model(path)
-    return model
+# model = train_vgg_model('dataset/processed_images/images_splitted',
+#                         'dataset/processed_images/label_splitted',
+#                         512, 512, 20, 23)
+#
+# input_image_1 = 'dataset/processed_images/images_splitted/000_s0_0.jpg'
+# input_image_2 = 'dataset/processed_images/images_splitted/000_s0_2.jpg'
+# input_image_3 = 'dataset/processed_images/images_splitted/004_s0_2.jpg'
+#
+# model.predict_segmentation(inp=input_image_1, out_fname=OUTPUT_DIRECTORY+'out1.png')
+# model.predict_segmentation(inp=input_image_2, out_fname=OUTPUT_DIRECTORY+'out2.png')
+# model.predict_segmentation(inp=input_image_3, out_fname=OUTPUT_DIRECTORY+'out3.png')
 
-
-# vgg_model = train_vgg_model(ORIGINAL_IMAGES_DIRECTORY, LABELED_IMAGES_DIRECTORY, 608, 416, n_epochs, n_classes)
-# vgg_model.save(MODELS_DIRECTORY+"vgg_unet.model")
-# vgg_model = load_model(MODELS_DIRECTORY+"vgg_unet.model")
-# input_image = ORIGINAL_IMAGES_DIRECTORY+'000.jpg'
-# prediction = vgg_model.predict(input_image)
-
+select_complex_labels('dataset/processed_images/label_splitted/',
+                      label_output_dir='dataset/processed_images/label_selected',
+                      image_dir='dataset/processed_images/images_splitted',
+                      image_output_dir='dataset/processed_images/images_selected',
+                      min_types=5)

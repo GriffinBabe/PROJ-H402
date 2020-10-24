@@ -27,7 +27,7 @@ def load_paths(directory_path, exclude=None):
 def rescale_images(directory_path, output_path, new_size, image_suffix='_resized'):
     image_paths = load_paths(directory_path, image_suffix)
     images_count = len(image_paths)
-    print("Found {} images in directory: {}".format(images_count, output_path))
+    print("Found {} images_splitted in directory: {}".format(images_count, output_path))
     processed_count = 0
     for im_p in image_paths:
         print("Processing image {}/{}.".format(processed_count + 1, images_count))
@@ -40,7 +40,7 @@ def rescale_images(directory_path, output_path, new_size, image_suffix='_resized
 def flip_images(directory_path, output_path, image_suffix='_flipped', horizontal=True):
     image_paths = load_paths(directory_path, image_suffix)
     images_count = len(image_paths)
-    print("Found {} images in directory: {}".format(images_count, output_path))
+    print('Found {} images_splitted in directory: {}'.format(images_count, output_path))
     processed_count = 0
     for im_p in image_paths:
         print("Processing image {}/{}.".format(processed_count + 1, images_count))
@@ -55,3 +55,26 @@ def flip_images(directory_path, output_path, image_suffix='_flipped', horizontal
             im_flipped = cv2.flip(im, 0)
         cv2.imwrite(os.path.join(output_path, file_new_name), im_flipped)
         processed_count += 1
+
+
+def split_images(directory_path, output_path, width_div, height_div):
+    image_paths = load_paths(directory_path, None)
+    im = cv2.imread(os.path.join(directory_path, image_paths[0]))
+    im_size = im.shape
+    sub_im_h = int(im_size[0] / height_div)
+    sub_im_w = int(im_size[1] / width_div)
+    processed_count = 0
+    total_images = len(image_paths) * height_div * width_div
+    for im_p in image_paths:
+        title_regex = r'(.*)\.([A-Za-z0-9]+)$'
+        file_name = re.search(title_regex, im_p).group(1)
+        file_extension = re.search(title_regex, im_p).group(2)
+        im = cv2.imread(os.path.join(directory_path, im_p), cv2.IMREAD_COLOR)
+        for x in range(height_div):
+            for y in range(width_div):
+                print(im.shape)
+                print('Processing image {}/{}'.format(processed_count, total_images))
+                sub_image = im[x*sub_im_h:(x + 1)*sub_im_h, y*sub_im_w:(y + 1)*sub_im_w, :]
+                file_new_name = '{}_s{}_{}.{}'.format(file_name, x, y, file_extension)
+                cv2.imwrite(os.path.join(output_path, file_new_name), sub_image)
+                processed_count += 1
