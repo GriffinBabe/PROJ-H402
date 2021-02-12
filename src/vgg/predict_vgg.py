@@ -1,8 +1,7 @@
 from src.global_var import *
-from src.train_vgg import n_classes, input_width, input_height, output_width, output_height
+from src.vgg.train_vgg import n_classes, input_width, input_height, output_width, output_height
 import matplotlib.pyplot as plt
-from tensorflow.keras.models import load_model
-from tensorflow.keras.applications.vgg16 import decode_predictions, preprocess_input
+from tensorflow.keras.applications.vgg16 import preprocess_input
 from keras_segmentation.models.unet import vgg_unet
 from skimage.io import imread
 from skimage.transform import resize

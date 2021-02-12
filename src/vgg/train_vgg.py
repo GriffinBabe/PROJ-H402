@@ -9,7 +9,7 @@ output_width = 304
 output_height = 208
 
 n_classes = 23  # all the classes we want to discriminate
-n_epochs = 5
+n_epochs = 100
 
 
 def train_vgg_model(weight_save, epochs=n_epochs):

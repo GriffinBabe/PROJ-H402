@@ -1,5 +1,5 @@
-from src.train_vgg import input_width, input_height, n_classes
 from src.preprocessing import preprocess_segmentation, preprocess_rgb_image, process_segmentation_output
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from src.global_var import *
 from tensorflow.keras import layers
 from tensorflow import keras
@@ -16,6 +16,12 @@ import os
 # Computer Science Department and BIOSS Centre for Biological Signalling Studies,
 # University of Freiburg, Germany
 # https://arxiv.org/pdf/1505.04597.pdf
+
+
+INPUT_WIDTH = 608
+INPUT_HEIGHT = 416
+N_CLASSES = 23
+N_EPOCHS = 2
 
 
 def u_net(input_height, input_width, n_classes, pretrained_weights=None):
@@ -84,25 +90,46 @@ def u_net(input_height, input_width, n_classes, pretrained_weights=None):
     return model
 
 
-def train_unet(input_dir, label_dir):
-    model = u_net(input_height, input_width, n_classes)
-    image_1_path = os.path.join(input_dir, '000.jpg')
-    seg_1_path = os.path.join(label_dir, '000.png')
+def get_image_generators(image_dir, label_dir):
+    """
+    Will create generators to preprocess images and feed them into the model while training.
+    The generator are helpful as we don't have to fully load the dataset into memory.
+    :return: A generator that will provided processed data for the model.
+    """
 
-    image_1 = preprocess_rgb_image(imread(image_1_path), (input_height, input_width))
-    seg_1 = preprocess_segmentation(imread(seg_1_path, as_gray=True), (input_height, input_width), n_classes)
+    def segmentation_preprocessing(seg_image):
+        # Resizing will already be done by the Generator
+        out = np.zeros((seg_image.shape[0], seg_image.shape[1], N_CLASSES), dtype=np.uint8)
+        for i in range(N_CLASSES):
+            out[seg_image[:, :] == i, i] = 1.0
+        return out
 
-    image_1 = np.expand_dims(image_1, axis=0)
-    seg_1 = np.expand_dims(seg_1, axis=0)
+    image_datagen = ImageDataGenerator(
+        rescale=1.0/255.0
+    )
+    label_datagen = ImageDataGenerator(preprocessing_function=segmentation_preprocessing)
 
-    model.fit(x=image_1, y=seg_1, batch_size=1, epochs=2, verbose=True)
+    image_generator = image_datagen.flow_from_directory(image_dir,
+                                                        target_size=(INPUT_HEIGHT, INPUT_WIDTH),
+                                                        batch_size=32,
+                                                        class_mode=None)  # Doesn't expect a specific folder layout
 
-    # Predict with the same single input image used for training
-    seg_output = model.predict(image_1)
-    seg_output = process_segmentation_output(seg_output, (input_height, input_width), n_classes)
+    label_generator = label_datagen.flow_from_directory(label_dir,
+                                                        target_size=(INPUT_HEIGHT, INPUT_WIDTH),
+                                                        batch_size=32,
+                                                        class_mode=None)
 
-    plt.imshow(seg_output[0])
-    plt.show()
+    train_generator = zip(image_generator, label_generator)  # Merge both generators for fit_generator call
+
+    return train_generator
 
 
-train_unet(ORIGINAL_IMAGES_DIRECTORY, LABELED_IMAGES_DIRECTORY)
+def train_unet(input_dir, label_dir, epochs):
+    model = u_net(INPUT_HEIGHT, INPUT_WIDTH, N_CLASSES)
+    generators = get_image_generators(input_dir, label_dir)
+    model.fit(generator=generators, epochs=epochs)
+    return model
+
+
+if __name__ == '__main__':
+    trained_model = train_unet(ORIGINAL_IMAGES_DIRECTORY, LABELED_IMAGES_DIRECTORY, N_EPOCHS)
