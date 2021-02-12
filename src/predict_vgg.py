@@ -40,12 +40,12 @@ def process_output(output):
     return output_list
 
 
-input_image = imread(os.path.join(ORIGINAL_IMAGES_DIRECTORY, '100.jpg'))
-model = load_vgg16_model(os.path.join(VGG16_20_EPOCHS_GPU, 'variables'))
+if __name__ == '__main__':
+    input_image = imread(os.path.join(ORIGINAL_IMAGES_DIRECTORY, '100.jpg'))
+    model = load_vgg16_model(VGG16_FCHOLLET_WEIGHTS)
 
-
-output_path = os.path.join(OUTPUT_DIRECTORY, '100.png')
-out = model.predict_segmentation(inp=input_image, out_fname=output_path)
-plt.imshow(out)
-plt.show()
+    output_path = os.path.join(OUTPUT_DIRECTORY, '100.png')
+    out = model.predict_segmentation(inp=input_image, out_fname=output_path)
+    plt.imshow(out)
+    plt.show()
 

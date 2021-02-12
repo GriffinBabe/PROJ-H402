@@ -3,6 +3,57 @@ import cv2
 import os
 import re
 import matplotlib.pyplot as plt
+from skimage.transform import resize
+
+
+def process_segmentation_output(output, output_shape, n_classes):
+    """
+    Converts the segmentation output into a visible image
+    :return:
+    """
+
+    # Color linspace for segmentation output presentation
+    t = np.linspace(-510, 510, n_classes)
+    color_array = np.round(np.clip(np.stack([-t, 510-np.abs(t), t], axis=1), 0, 255)).astype(np.uint8)
+
+    output_list = []
+
+    for out in output:
+        out = out.reshape((output_shape[0], output_shape[1], n_classes))
+        # Merge each channel into an image
+        out_processed = np.zeros((output_shape[0], output_shape[1], 3), dtype=np.uint8)
+        out_processed[:, :] = color_array[np.argmax(out, axis=2)]
+        output_list.append(out_processed)
+
+    return output_list
+
+
+def preprocess_segmentation(image, input_shape, n_classes):
+    """
+    Processes a segmentation image into multiple channels input map for the UNET
+    :param image: a uchar8 image with n_classes
+    :return:
+    """
+    image = resize(image, input_shape)
+    if n_classes > 256 or isinstance(image[0, 0].dtype, np.uint8):
+        raise Exception('Image must be an uint8 image and channels cannot be more than 256')
+    seg = np.zeros((image.shape[0], image.shape[1], n_classes), dtype=np.float)
+    for i in range(n_classes):
+        seg[image[:, :] == i, i] = 1.0
+    return seg
+
+
+def preprocess_rgb_image(image, input_shape):
+    """
+    Processes an input RGB image for the unet
+    :param image:
+    :return:
+    """
+    image = resize(image, input_shape)
+    if isinstance(image[0, 0].dtype, np.uint8):
+        return image.astype(np.float) / 255.0
+    else:
+        return image
 
 
 def load_paths(directory_path, exclude=None):

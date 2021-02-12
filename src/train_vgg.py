@@ -21,4 +21,5 @@ def train_vgg_model(weight_save, epochs=n_epochs):
     model.save_weights(os.path.join(MODELS_DIRECTORY, weight_save))
 
 
-train_vgg_model(VGG16_5_EPOCHS)
+if __name__ == '__main__':
+    train_vgg_model(VGG16_5_EPOCHS)
