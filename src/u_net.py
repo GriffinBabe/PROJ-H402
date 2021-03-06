@@ -1,6 +1,10 @@
 from src.preprocessing import preprocess_segmentation, preprocess_rgb_image, process_segmentation_output
+from tensorflow.keras.callbacks.experimental import BackupAndRestore
+from src.unet_datagen import UnetDataGenerator
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from src.global_var import *
+from skimage.io import imread
+from skimage.transform import resize
 from tensorflow.keras import layers
 from tensorflow import keras
 import tensorflow as tf
@@ -21,7 +25,8 @@ import os
 INPUT_WIDTH = 608
 INPUT_HEIGHT = 416
 N_CLASSES = 23
-N_EPOCHS = 2
+N_EPOCHS = 5
+BATCH_SIZE = 2
 
 
 def u_net(input_height, input_width, n_classes, pretrained_weights=None):
@@ -82,7 +87,7 @@ def u_net(input_height, input_width, n_classes, pretrained_weights=None):
     output = layers.Conv2D(n_classes, 1, activation='sigmoid')(x)
 
     model = keras.Model(inputs=[input], outputs=[output])
-    model.compile(optimizer=tf.keras.optimizers.Adam(), loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer=tf.keras.optimizers.Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
 
     if pretrained_weights:
         model.load_weights(pretrained_weights)
@@ -90,46 +95,20 @@ def u_net(input_height, input_width, n_classes, pretrained_weights=None):
     return model
 
 
-def get_image_generators(image_dir, label_dir):
-    """
-    Will create generators to preprocess images and feed them into the model while training.
-    The generator are helpful as we don't have to fully load the dataset into memory.
-    :return: A generator that will provided processed data for the model.
-    """
-
-    def segmentation_preprocessing(seg_image):
-        # Resizing will already be done by the Generator
-        out = np.zeros((seg_image.shape[0], seg_image.shape[1], N_CLASSES), dtype=np.uint8)
-        for i in range(N_CLASSES):
-            out[seg_image[:, :] == i, i] = 1.0
-        return out
-
-    image_datagen = ImageDataGenerator(
-        rescale=1.0/255.0
-    )
-    label_datagen = ImageDataGenerator(preprocessing_function=segmentation_preprocessing)
-
-    image_generator = image_datagen.flow_from_directory(image_dir,
-                                                        target_size=(INPUT_HEIGHT, INPUT_WIDTH),
-                                                        batch_size=32,
-                                                        class_mode=None)  # Doesn't expect a specific folder layout
-
-    label_generator = label_datagen.flow_from_directory(label_dir,
-                                                        target_size=(INPUT_HEIGHT, INPUT_WIDTH),
-                                                        batch_size=32,
-                                                        class_mode=None)
-
-    train_generator = zip(image_generator, label_generator)  # Merge both generators for fit_generator call
-
-    return train_generator
-
-
-def train_unet(input_dir, label_dir, epochs):
+def train_unet(input_dir, label_dir, epochs, save_path=None):
     model = u_net(INPUT_HEIGHT, INPUT_WIDTH, N_CLASSES)
-    generators = get_image_generators(input_dir, label_dir)
-    model.fit(generator=generators, epochs=epochs)
+    generators = UnetDataGenerator(input_dir, label_dir,
+                                   (INPUT_HEIGHT, INPUT_WIDTH), N_CLASSES, BATCH_SIZE, shuffle=True)
+    checkpoint_path = os.path.join(MODELS_DIRECTORY, UNET_CHECKPOINT_PATH)
+    model_directory = os.path.join(MODELS_DIRECTORY, UNET_5_EPOCHS)
+    backup_callback = BackupAndRestore(backup_dir=checkpoint_path)
+    model.fit(x=generators, epochs=epochs, callbacks=[backup_callback])
+    # Saves the weights
+    if save_path is not None:
+        model.save(save_path)
     return model
 
 
 if __name__ == '__main__':
-    trained_model = train_unet(ORIGINAL_IMAGES_DIRECTORY, LABELED_IMAGES_DIRECTORY, N_EPOCHS)
+    model_save_path = os.path.join(MODELS_DIRECTORY, UNET_5_EPOCHS)
+    trained_model = train_unet(ORIGINAL_IMAGES_DIRECTORY, LABELED_IMAGES_DIRECTORY, N_EPOCHS, save_path=model_save_path)
