@@ -7,6 +7,7 @@ ImageDataGenerator class already exists for Keras, but does not support a generi
 of drone dataset, 23 different classes are needed.
 """
 from keras.utils import Sequence
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 from skimage.io import imread
 from skimage.transform import resize
@@ -40,8 +41,8 @@ class UnetDataGenerator(Sequence):
         return out
 
     def __getitem__(self, item):
-        self._temp_image_paths, image_paths = self._temp_image_paths[self._batch_size:], self._temp_image_paths[:self._batch_size]
-        self._temp_label_paths, label_paths = self._temp_label_paths[self._batch_size:], self._temp_label_paths[:self._batch_size]
+        image_paths = self._temp_image_paths[self._batch_size*item:self._batch_size*(item + 1)]
+        label_paths = self._temp_label_paths[self._batch_size*item:self._batch_size*(item + 1)]
         image_batch = []
         label_batch = []
         for idx in range(len(image_paths)):
@@ -50,8 +51,9 @@ class UnetDataGenerator(Sequence):
             image_batch.append(image)
 
             label = cv2.imread(os.path.join(self._label_dir, label_paths[idx]), cv2.IMREAD_GRAYSCALE)
-            label = cv2.resize(label, (self._size[1], self._size[0]))
-            label = self.__data_generation(label)  # Transforms single channel grayscale image into multiple channel image
+            label = cv2.resize(label, (int(self._size[1] / 2), int(self._size[0] / 2)))
+            label = label.reshape(int(self._size[1] / 2) * int(self._size[0] / 2), -1)
+            # label = self.__data_generation(label)  # Transforms single channel grayscale image into multiple channel image
             label_batch.append(label)
         return np.array(image_batch, dtype=np.uint8), np.array(label_batch, dtype=np.uint8)
 
@@ -61,3 +63,31 @@ class UnetDataGenerator(Sequence):
         self._temp_label_paths = list(self._label_paths)
         if self._shuffle:
             self._temp_image_paths, self._temp_label_paths = shuffle(self._temp_image_paths, self._temp_label_paths)
+
+
+def get_default_datagen(image_dir, label_dir, input_size, label_size, batch_size=1):
+
+    def preprocessing_reshape(inp):
+        return inp.reshape(-1, 1, 1)
+
+
+    image_datagen = ImageDataGenerator(
+        rescale=1.0/255.0
+    )
+    label_datagen = ImageDataGenerator(preprocessing_function=preprocessing_reshape)
+
+    image_generator = image_datagen.flow_from_directory(image_dir,
+                                                        target_size=(input_size[0], input_size[1]),
+                                                        batch_size=batch_size,
+                                                        class_mode=None)  # Doesn't expect a specific folder layout
+
+    label_generator = label_datagen.flow_from_directory(label_dir,
+                                                        target_size=(label_size[0] * label_size[1], 1),
+                                                        batch_size=batch_size,
+                                                        color_mode='grayscale',
+                                                        class_mode=None)
+
+    train_generator = zip(image_generator, label_generator)  # Merge both generators for fit_generator call
+
+    return train_generator
+

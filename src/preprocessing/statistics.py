@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import os
 
-from src.preprocessing import load_paths
+from src.preprocessing.preprocessing import load_paths
 
 
 def save_selected_files(values, label_dir, image_dir, label_output_dir, image_output_dir):

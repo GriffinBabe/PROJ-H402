@@ -1,14 +1,17 @@
 ORIGINAL_IMAGES_DIRECTORY = './dataset/original_images/'
 LABELED_IMAGES_DIRECTORY = './dataset/label_images_semantic/'
-PROCESSED_IMAGES_DIRECTORY = './dataset/processed_images/images_splitted/'
-PROCESSED_LABELED_IMAGES_DIRECTORY = './dataset/processed_images/label_splitted/'
+
+MERGED_LABEL_DIRECTORY = './dataset/label_images_merged/'
+
 MODELS_DIRECTORY = './models/'
 OUTPUT_DIRECTORY = './out/'
 
-VGG16_20_EPOCHS = 'vgg_unet_20_epochs/vgg'
-VGG16_5_EPOCHS = 'vgg_unet_5_epochs/vgg'
-VGG16_FCHOLLET_WEIGHTS = 'fchollet/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
+# Full 23 classes
+VGG_CHECKPOINT_PATH = 'vgg_unet_checkpoint/'
+VGG16_60_EPOCHS = 'vgg_unet_60_epochs/vgg'
 
-UNET_5_EPOCHS = 'unet_5_epochs/'
-VGG_CHECKPOINT_PATH = 'vgg_unet/'
+# Reduced to 7 classes for easier task
+VGG_CHECKPOINT_PATH_SIMPLE = 'vgg_unet_checkpoint_simple/'
+VGG16_60_EPOCHS_SIMPLE = 'vgg_unet_60_epochs_simple/vgg'
+
 UNET_CHECKPOINT_PATH = 'u_net/'

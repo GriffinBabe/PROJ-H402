@@ -132,7 +132,7 @@ def split_images(directory_path, output_path, width_div, height_div):
 
 
 def preprocess_images_and_labels():
-    rescale_images('../dataset/original_images',
+    rescale_images('../../dataset/original_images',
                    'dataset/processed_images/images_rescaled',
                    (5632, 3584))
     flip_images('dataset/processed_images/images_splitted',
@@ -141,7 +141,7 @@ def preprocess_images_and_labels():
     flip_images('dataset/processed_images',
                 'dataset/processed_images',
                 image_suffix='_vflipped', horizontal=False)
-    rescale_images('../dataset/label_images_semantic',
+    rescale_images('../../dataset/label_images_semantic',
                    'dataset/processed_images/label_rescaled',
                    (5632, 3584))
     flip_images('dataset/processed_images/label_splitted',

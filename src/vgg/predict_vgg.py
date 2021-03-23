@@ -13,11 +13,10 @@ t = np.linspace(-510, 510, n_classes)
 color_array = np.round(np.clip(np.stack([-t, 510-np.abs(t), t], axis=1), 0, 255)).astype(np.uint8)
 
 
-def load_vgg16_model(model_name):
-    path = os.path.join(MODELS_DIRECTORY, model_name)
+def load_vgg16_model(model_path):
     model = vgg_unet(n_classes, input_width=input_width, input_height=input_height)
-    model.build((input_width, input_height))
-    model.load_weights(path)
+    # model.build((input_width, input_height))
+    model.load_weights(model_path)
     return model
 
 
@@ -40,11 +39,16 @@ def process_output(output):
 
 
 if __name__ == '__main__':
-    input_image = imread(os.path.join(ORIGINAL_IMAGES_DIRECTORY, '100.jpg'))
-    model = load_vgg16_model(VGG16_FCHOLLET_WEIGHTS)
+    input_image = imread(os.path.join(ORIGINAL_IMAGES_DIRECTORY, 'img', '100.jpg'))
+    label_image = imread(os.path.join(LABELED_IMAGES_DIRECTORY, 'img', '100.png'))
+    model = load_vgg16_model(os.path.join(MODELS_DIRECTORY, VGG16_60_EPOCHS))
 
     output_path = os.path.join(OUTPUT_DIRECTORY, '100.png')
     out = model.predict_segmentation(inp=input_image, out_fname=output_path)
+
+    plt.subplot(211)
     plt.imshow(out)
+    plt.subplot(212)
+    plt.imshow(label_image)
     plt.show()
 
