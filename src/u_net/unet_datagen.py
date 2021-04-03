@@ -70,7 +70,6 @@ def get_default_datagen(image_dir, label_dir, input_size, label_size, batch_size
     def preprocessing_reshape(inp):
         return inp.reshape(-1, 1, 1)
 
-
     image_datagen = ImageDataGenerator(
         rescale=1.0/255.0
     )
