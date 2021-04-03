@@ -67,24 +67,26 @@ class UnetDataGenerator(Sequence):
 
 def get_default_datagen(image_dir, label_dir, input_size, label_size, batch_size=1):
 
-    def preprocessing_reshape(inp):
-        return inp.reshape(-1, 1, 1)
-
-    image_datagen = ImageDataGenerator(
-        rescale=1.0/255.0
+    train_datagen = ImageDataGenerator(
+        rescale=1.0/255.0,
+        shear_range=0.2,
+        zoom_range=0.2,
+        horizontal_flip=True,
+        vertical_flip=True
     )
-    label_datagen = ImageDataGenerator(preprocessing_function=preprocessing_reshape)
 
-    image_generator = image_datagen.flow_from_directory(image_dir,
+    image_generator = train_datagen.flow_from_directory(image_dir,
                                                         target_size=(input_size[0], input_size[1]),
                                                         batch_size=batch_size,
+                                                        seed=42,
                                                         class_mode=None)  # Doesn't expect a specific folder layout
 
-    label_generator = label_datagen.flow_from_directory(label_dir,
+    label_generator = train_datagen.flow_from_directory(label_dir,
                                                         target_size=(label_size[0] * label_size[1], 1),
                                                         batch_size=batch_size,
+                                                        seed=42,
                                                         color_mode='grayscale',
-                                                        class_mode=None)
+                                                        class_mode='sparse')
 
     train_generator = zip(image_generator, label_generator)  # Merge both generators for fit_generator call
 

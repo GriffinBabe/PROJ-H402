@@ -37,8 +37,9 @@ def u_net(input_height, input_width, output_height, output_width, n_classes):
 
     :param input_height: the input image height
     :param input_width: the input image width
+    :param output_height: the output image height
+    :param output_width: the output image width
     :param n_classes: the number of classes for semantic segmentation
-    :param pretrained_weights: by default None, if specified loads the weights from a file.
     :return: a Keras U-NET model.
     """
 
@@ -91,7 +92,7 @@ def train_unet(input_dir, label_dir, epochs, save_path=None, plot=None):
         plot_model(model, to_file=plot, show_shapes=True, show_layer_names=True)
 
     generators = get_default_datagen(input_dir, label_dir, (INPUT_WIDTH, INPUT_HEIGHT),
-                                     (OUTPUT_WIDTH, OUTPUT_HEIGHT))
+                                     (OUTPUT_WIDTH, OUTPUT_HEIGHT), batch_size=BATCH_SIZE)
 
     callback_list = []
     if save_path is not None:
