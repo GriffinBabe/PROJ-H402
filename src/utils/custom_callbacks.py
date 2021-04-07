@@ -30,8 +30,9 @@ class SaveWeightCallback(keras.callbacks.Callback):
         files_numbers = []
         for f in files:
             try:
-                f = f.replace('.weights', '')
-                files_numbers.append(int(f))
+                f = f.replace('.weights', '').replace('.index', '').replace('.data-00000-of-00001', '')
+                if f.isnumeric():
+                    files_numbers.append(int(f))
             except ValueError:
                 continue
 
@@ -49,5 +50,5 @@ class SaveWeightCallback(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         save_path = os.path.join(self._save_folder, str(self._epoch_count)+'.weights')
-        self.model.save_weights()
+        self.model.save_weights(save_path)
         self._epoch_count += 1

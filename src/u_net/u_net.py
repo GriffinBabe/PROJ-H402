@@ -1,7 +1,8 @@
 from keras.utils.vis_utils import plot_model
-from src.u_net.unet_datagen import get_default_datagen
+from src.u_net.unet_datagen import get_default_datagen, UnetDataGenerator
 from src.global_var import *
 from src.utils.custom_callbacks import SaveWeightCallback, PrintLR
+from keras_contrib.callbacks import CyclicLR
 from tensorflow.keras import layers
 from tensorflow import keras
 import tensorflow as tf
@@ -81,18 +82,19 @@ def u_net(input_height, input_width, output_height, output_width, n_classes):
     return keras.Model(inputs=[img_input], outputs=[output])
 
 
-def train_unet(input_dir, label_dir, epochs, save_path=None, plot=None):
+def train_unet(input_dir, label_dir, epochs, optimizer=tf.keras.optimizers.Adadelta(), save_path=None, plot=None, additional_callbacks=[]):
 
     model = u_net(INPUT_HEIGHT, INPUT_WIDTH, OUTPUT_HEIGHT, OUTPUT_WIDTH, N_CLASSES)
-    model.compile(optimizer=tf.keras.optimizers.Adadelta(),
-                  loss='sparse_categorical_crossentropy',
+    model.compile(optimizer=optimizer,
+                  loss='categorical_crossentropy',
                   metrics=['accuracy'])
 
     if plot is not None:
         plot_model(model, to_file=plot, show_shapes=True, show_layer_names=True)
 
-    generators = get_default_datagen(input_dir, label_dir, (INPUT_WIDTH, INPUT_HEIGHT),
-                                     (OUTPUT_WIDTH, OUTPUT_HEIGHT), batch_size=BATCH_SIZE)
+    # Data generator, performs image augmentation and loads image in memory only when needed.
+    generators = UnetDataGenerator(input_dir, label_dir, (INPUT_WIDTH, INPUT_HEIGHT), (OUTPUT_WIDTH, OUTPUT_HEIGHT),
+                                   classes=N_CLASSES, batch_size=BATCH_SIZE, shuffle=True, repeats=3)
 
     callback_list = []
     if save_path is not None:
@@ -103,7 +105,9 @@ def train_unet(input_dir, label_dir, epochs, save_path=None, plot=None):
         # Saves all epoch info into a csv file, appends the data at each epoch.
         csv_logger = keras.callbacks.CSVLogger(os.path.join(save_path, 'log.csv'), separator=',', append=True)
         callback_list.append(csv_logger)
+    callback_list += additional_callbacks
 
+    # Prints the set learning rate, useful when using a Cyclic learning rate
     print_lr_callback = PrintLR()
     callback_list.append(print_lr_callback)
 
@@ -114,4 +118,14 @@ def train_unet(input_dir, label_dir, epochs, save_path=None, plot=None):
 
 if __name__ == '__main__':
     model_save_path = os.path.join(MODELS_DIRECTORY, UNET_CHECPOINT_PATH_SIMPLE)
-    trained_model = train_unet(ORIGINAL_IMAGES_DIRECTORY, MERGED_LABEL_DIRECTORY, N_EPOCHS, save_path=model_save_path)
+    images_path = os.path.join(ORIGINAL_IMAGES_DIRECTORY, 'img')
+    label_path = os.path.join(MERGED_LABEL_DIRECTORY, 'img')
+
+    cyclic_lr = CyclicLR(base_lr=0.001, max_lr=0.01, step_size=1024, mode='triangular')
+
+    trained_model = train_unet(images_path,
+                               label_path,
+                               N_EPOCHS,
+                               save_path=model_save_path,
+                               optimizer=tf.keras.optimizers.SGD(),
+                               additional_callbacks=[cyclic_lr])
