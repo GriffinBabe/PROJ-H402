@@ -22,7 +22,7 @@ class UnetDataGenerator(Sequence):
     Inspired on this thread: https://github.com/keras-team/keras/issues/12120
     """
 
-    def __init__(self, features, targets, image_size, label_size, classes, batch_size, repeats=1, shuffle=True):
+    def __init__(self, features, targets, image_size, label_size, classes, batch_size, repeats=1, shuffle=True, validation=False):
         self._features = features
         self._targets = targets
         self._image_size = image_size
@@ -31,6 +31,7 @@ class UnetDataGenerator(Sequence):
         self._batch_size = batch_size
         self._shuffle = shuffle
         self._repeats = repeats
+        self._verification = validation
 
         self._ids = list(self._list_files())
 
@@ -75,9 +76,12 @@ class UnetDataGenerator(Sequence):
 
         params = self._augmenter.get_random_transform(self._image_size)
 
-        X = np.array([self._augmenter.apply_transform(self._augmenter.standardize(x), params) for x in X])
-        y = np.array([self._encode_one_hot(cv2.resize(self._augmenter.apply_transform(_y, params)[:, :, 0], self._label_size, cv2.INTER_NEAREST).reshape(-1, 1)) for _y in y])
-
+        if not self._verification:
+            X = np.array([self._augmenter.apply_transform(self._augmenter.standardize(x), params) for x in X])
+            y = np.array([self._encode_one_hot(cv2.resize(self._augmenter.apply_transform(_y, params)[:, :, 0], self._label_size, cv2.INTER_NEAREST).reshape(-1, 1)) for _y in y])
+        else:
+            X = np.array([self._augmenter.standardize(x) for x in X])
+            y = np.array([self._encode_one_hot(cv2.resize(_y[:, :, 0], self._label_size, cv2.INTER_NEAREST).reshape(-1, 1)) for _y in y])
         return np.array(X), np.array(y)
 
     def on_epoch_end(self):

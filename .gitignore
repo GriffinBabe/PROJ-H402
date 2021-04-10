@@ -1,6 +1,7 @@
 dataset/
 out/
 models/
+other/
 .idea/
 *.json
 __pycache__/

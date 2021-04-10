@@ -82,7 +82,9 @@ def u_net(input_height, input_width, output_height, output_width, n_classes):
     return keras.Model(inputs=[img_input], outputs=[output])
 
 
-def train_unet(input_dir, label_dir, epochs, optimizer=tf.keras.optimizers.Adadelta(), save_path=None, plot=None, additional_callbacks=[]):
+def train_unet(input_dir, label_dir, epochs, optimizer=tf.keras.optimizers.Adadelta(), save_path=None, plot=None, additional_callbacks=[], input_val_dir=None, label_val_dir=None):
+
+    validate = input_val_dir is not None and label_val_dir is not None
 
     model = u_net(INPUT_HEIGHT, INPUT_WIDTH, OUTPUT_HEIGHT, OUTPUT_WIDTH, N_CLASSES)
     model.compile(optimizer=optimizer,
@@ -95,6 +97,12 @@ def train_unet(input_dir, label_dir, epochs, optimizer=tf.keras.optimizers.Adade
     # Data generator, performs image augmentation and loads image in memory only when needed.
     generators = UnetDataGenerator(input_dir, label_dir, (INPUT_WIDTH, INPUT_HEIGHT), (OUTPUT_WIDTH, OUTPUT_HEIGHT),
                                    classes=N_CLASSES, batch_size=BATCH_SIZE, shuffle=True, repeats=3)
+
+    validation_generator = None
+    if validate:
+        validation_generator = UnetDataGenerator(input_val_dir, label_val_dir, (INPUT_WIDTH, INPUT_HEIGHT),
+                                                 (OUTPUT_WIDTH, OUTPUT_HEIGHT), classes=N_CLASSES, batch_size=BATCH_SIZE,
+                                                 shuffle=True, repeats=12, validation=True)
 
     callback_list = []
     if save_path is not None:
@@ -111,21 +119,26 @@ def train_unet(input_dir, label_dir, epochs, optimizer=tf.keras.optimizers.Adade
     print_lr_callback = PrintLR()
     callback_list.append(print_lr_callback)
 
-    model.fit(x=generators, epochs=epochs, steps_per_epoch=STEP_PER_EPOCH, callbacks=callback_list)
+    model.fit(x=generators, epochs=epochs, steps_per_epoch=STEP_PER_EPOCH, callbacks=callback_list,
+              validation_data=validation_generator, validation_batch_size=2, validation_freq=2)
 
     return model
 
 
 if __name__ == '__main__':
-    model_save_path = os.path.join(MODELS_DIRECTORY, UNET_CHECPOINT_PATH_SIMPLE)
+    model_save_path = os.path.join(MODELS_DIRECTORY, UNET_CHECKPOINT_PATH_SIMPLE_VERIFICATION)
     images_path = os.path.join(ORIGINAL_IMAGES_DIRECTORY, 'img')
     label_path = os.path.join(MERGED_LABEL_DIRECTORY, 'img')
+    images_val_dir = os.path.join(VERIFICATION_IMAGES_DIRECTORY, 'img')
+    label_val_dir = os.path.join(VERIFICATION_LABEL_DIRECTORY, 'img')
 
-    cyclic_lr = CyclicLR(base_lr=0.001, max_lr=0.01, step_size=1024, mode='triangular')
+    # cyclic_lr = CyclicLR(base_lr=0.001, max_lr=0.01, step_size=1024, mode='triangular')
 
     trained_model = train_unet(images_path,
                                label_path,
                                N_EPOCHS,
                                save_path=model_save_path,
-                               optimizer=tf.keras.optimizers.SGD(),
-                               additional_callbacks=[cyclic_lr])
+                               optimizer=tf.keras.optimizers.Adadelta(),
+                               # additional_callbacks=[cyclic_lr],
+                               input_val_dir=images_val_dir,
+                               label_val_dir=label_val_dir)
